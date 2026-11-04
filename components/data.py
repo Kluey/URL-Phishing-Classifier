@@ -1,3 +1,6 @@
+import math
+import warnings
+
 import numpy as np
 import pandas as pd
 import tldextract
@@ -57,6 +60,12 @@ def _split_by_domain(df, train_frac, validation_frac, random_state, n_folds=10):
     n_test = max(1, round((1 - train_frac - validation_frac) * n_folds))
     if n_val + n_test >= n_folds:
         raise ValueError("train_frac is too small to split by domain")
+    if not (math.isclose(n_val, validation_frac * n_folds)
+            and math.isclose(n_test, (1 - train_frac - validation_frac) * n_folds)):
+        warnings.warn(
+            f"Domain split works in steps of 1/{n_folds}: using "
+            f"{(n_folds - n_val - n_test) / n_folds:.0%} / {n_val / n_folds:.0%} / {n_test / n_folds:.0%}"
+        )
 
     test_idx = np.concatenate(fold_indices[:n_test])
     val_idx = np.concatenate(fold_indices[n_test:n_test + n_val])

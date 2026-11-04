@@ -79,3 +79,8 @@ def test_dataset_rejects_urls_that_normalize_to_empty(tmp_path):
     pd.DataFrame({"URL": ["a.com", "https://www."], "label": [1, 0]}).to_csv(csv, index=False)
     with pytest.raises(ValueError, match="empty"):
         PhishingDataset(csv, get_tokenizer())
+
+
+def test_domain_split_warns_when_fractions_are_rounded(urls_df):
+    with pytest.warns(UserWarning, match="steps of"):
+        split_dataset(urls_df, train_frac=0.75, validation_frac=0.05)
