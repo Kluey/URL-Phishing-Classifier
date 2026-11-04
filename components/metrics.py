@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+from torch.utils.data import Subset
 
 from components.config import PAD_ID
 
@@ -51,4 +53,11 @@ def predict_proba_loader(data_loader, model, device):
         logits = last_real_token_logits(model, input_batch.to(device, non_blocking=True))
         probs.append(torch.softmax(logits, dim=-1)[:, 0])
         labels.append(target_batch)
-    return torch.cat(probs).cpu().numpy(), torch.cat(labels).numpy()
+    probs, labels = torch.cat(probs).cpu().numpy(), torch.cat(labels).numpy()
+
+    # make_eval_loader reorders rows by length; undo that so row i matches dataset row i
+    subset = data_loader.dataset
+    if isinstance(subset, Subset) and len(subset) == len(subset.dataset):
+        inverse = np.argsort(subset.indices)
+        probs, labels = probs[inverse], labels[inverse]
+    return probs, labels
