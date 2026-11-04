@@ -20,6 +20,7 @@ from components.inference import build_classifier, get_tokenizer, save_classifie
 from components.training import build_optimizer, train_classifier
 
 SPLIT_FILES = ("train.csv", "validation.csv", "test.csv")
+SPLIT_INFO_PATH = DATA_DIR / "splits.json"
 
 
 def prepare_data(n_samples, seed, split_by):
@@ -29,6 +30,8 @@ def prepare_data(n_samples, seed, split_by):
         subset, random_state=seed, group_by_domain=(split_by == "domain")
     )
     save_splits(train_df, val_df, test_df, DATA_DIR)
+    split_info = {"n_samples": n_samples, "seed": seed, "split_by": split_by}
+    SPLIT_INFO_PATH.write_text(json.dumps(split_info, indent=2))
     print(f"Prepared {split_by}-level splits: "
           f"{len(train_df)} train / {len(val_df)} val / {len(test_df)} test")
     print(f"URLs whose domain also appears in train: "
@@ -73,6 +76,12 @@ def main():
             print(f"Missing splits ({', '.join(missing)}), preparing them from the raw dataset")
         prepare_data(args.n_samples, args.seed, args.split_by)
 
+    split_info = json.loads(SPLIT_INFO_PATH.read_text()) if SPLIT_INFO_PATH.exists() else None
+    requested = {"n_samples": args.n_samples, "seed": args.seed, "split_by": args.split_by}
+    if split_info != requested:
+        print(f"Warning: reusing existing splits ({split_info or 'settings unknown'}), "
+              f"not {requested}. Pass --prepare-data to rebuild them.")
+
     tokenizer = get_tokenizer()
     train_loader, val_loader, _ = make_loaders(
         DATA_DIR, tokenizer, MAX_LEN,
@@ -99,7 +108,12 @@ def main():
     run_path = args.output.with_suffix(".train.json")
     with open(run_path, "w") as f:
         json.dump(
-            {"args": vars(args), "val_accuracy_per_epoch": val_accs, "minutes": minutes},
+            {
+                "args": {k: v for k, v in vars(args).items() if k not in ("n_samples", "split_by")},
+                "splits": split_info,
+                "val_accuracy_per_epoch": val_accs,
+                "minutes": minutes,
+            },
             f, indent=2, default=str,
         )
     print(f"Saved run info to {run_path}")
