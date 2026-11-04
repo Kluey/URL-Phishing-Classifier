@@ -75,7 +75,7 @@ Threshold trade-off (a higher threshold flags fewer URLs):
 The first version scored 99.60% on a random split of raw URLs. It was misleading:
 
 - **Shortcut features.** The same site flipped between phishing and legitimate depending on whether `https://` or `www.` was present, because the legitimate URLs in the dataset mostly start with `https://www.`. Fix: strip the scheme and a leading `www.` in training and inference (`components/preprocessing.py`).
-- **Domain leakage.** A random split put URLs from the same site in both train and test. Fix: split by registered domain, so every test site is unseen (`components/data.py`).
+- **Domain leakage.** A random split put URLs from the same site in both train and test. Fix: split by registered domain, so every test site is unseen (`components/data.py`). Duplicates are also removed after normalization, so two spellings of one URL count once.
 
 | Setup | Test accuracy |
 |---|---|

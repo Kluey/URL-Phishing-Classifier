@@ -10,8 +10,16 @@ from components.preprocessing import normalize_url
 
 
 def load_urls(csv_path):
-    df = pd.read_csv(csv_path)
-    return df[["URL", "label"]].drop_duplicates(subset="URL")
+    """Load URLs, deduplicated on the normalized text the model actually sees.
+
+    Spellings that normalize to the same input (scheme, www.) count once, inputs
+    with conflicting labels are dropped, and URLs that normalize to "" are removed.
+    """
+    df = pd.read_csv(csv_path)[["URL", "label"]]
+    df = df.assign(_key=df["URL"].map(normalize_url))
+    df = df[df["_key"] != ""]
+    conflicting = df.groupby("_key")["label"].transform("nunique") > 1
+    return df[~conflicting].drop_duplicates(subset="_key").drop(columns="_key")
 
 
 def balanced_subset(df, n_total, label_col="label", random_state=SEED):
@@ -89,6 +97,12 @@ class PhishingDataset(Dataset):
             for url in self.data["URL"]
         ]
         self.labels = self.data["label"].tolist()
+
+        empty = [url for url, ids in zip(self.data["URL"], self.encoded_texts) if not ids]
+        if empty:
+            raise ValueError(
+                f"{len(empty)} URL(s) in {csv_file} normalize to an empty string, e.g. {empty[0]!r}"
+            )
 
     def __getitem__(self, idx):
         return self.encoded_texts[idx], self.labels[idx]

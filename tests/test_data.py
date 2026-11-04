@@ -2,7 +2,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from components.data import balanced_subset, domain_overlap, registered_domain, split_dataset
+from components.data import (
+    PhishingDataset, balanced_subset, domain_overlap, load_urls, registered_domain, split_dataset,
+)
+from components.inference import get_tokenizer
 
 
 @pytest.fixture
@@ -59,3 +62,20 @@ def test_random_url_split_leaks_domains(urls_df):
 def test_balanced_subset_has_equal_classes(urls_df):
     subset = balanced_subset(urls_df, 200)
     assert subset["label"].value_counts().tolist() == [100, 100]
+
+
+def test_load_urls_dedupes_on_normalized_url(tmp_path):
+    csv = tmp_path / "raw.csv"
+    pd.DataFrame({
+        "URL": ["https://www.a.com", "http://a.com", "https://www.b.com", "http://b.com", "https://www."],
+        "label": [1, 1, 1, 0, 0],
+        "extra": range(5),
+    }).to_csv(csv, index=False)
+    assert load_urls(csv)["URL"].tolist() == ["https://www.a.com"]
+
+
+def test_dataset_rejects_urls_that_normalize_to_empty(tmp_path):
+    csv = tmp_path / "split.csv"
+    pd.DataFrame({"URL": ["a.com", "https://www."], "label": [1, 0]}).to_csv(csv, index=False)
+    with pytest.raises(ValueError, match="empty"):
+        PhishingDataset(csv, get_tokenizer())
