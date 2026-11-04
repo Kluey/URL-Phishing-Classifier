@@ -29,9 +29,3 @@ def compute_metrics(p_phish, labels, threshold=0.5):
     for target in (0.01, 0.001):
         metrics[f"recall_at_{target:.1%}_fpr"] = float(tpr[fpr <= target].max())
     return metrics
-
-
-def misclassified(df, p_phish, threshold=0.5):
-    pred = np.where(p_phish > threshold, 0, 1)
-    out = df.assign(p_phish=p_phish, pred=pred)
-    return out[out["pred"] != out["label"]]
