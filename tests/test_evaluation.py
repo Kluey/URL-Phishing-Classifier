@@ -3,6 +3,7 @@ import pandas as pd
 import torch
 
 from components.data import PhishingDataset, make_eval_loader
+from components.evaluation import compute_metrics
 from components.inference import get_tokenizer
 from components.metrics import predict_proba_loader
 
@@ -28,3 +29,9 @@ def test_predict_proba_loader_returns_dataset_order(tmp_path):
 
     np.testing.assert_allclose(p_sorted, p_plain, rtol=1e-5)
     assert labels.tolist() == [0, 1, 0, 1]
+
+
+def test_compute_metrics_with_one_class():
+    metrics = compute_metrics(np.array([0.9, 0.2, 0.7]), np.array([0, 0, 0]))
+    assert metrics["recall_phishing"] == 2 / 3
+    assert metrics["roc_auc"] is None

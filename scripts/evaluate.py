@@ -44,7 +44,7 @@ def main():
     print(f"\n{args.split.capitalize()} metrics ({len(labels)} URLs, "
           f"phishing = positive class, threshold {args.threshold}):")
     for name, value in metrics.items():
-        print(f"  {name:<24}{value:.4f}")
+        print(f"  {name:<24}{'n/a' if value is None else f'{value:.4f}'}")
 
     metrics_path = args.weights.with_suffix(f".{args.split}_metrics.json")
     with open(metrics_path, "w") as f:
