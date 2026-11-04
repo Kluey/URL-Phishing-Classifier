@@ -51,16 +51,17 @@ def download_and_load_gpt2(model_size, models_dir):
 
 
 def download_file(url, destination, backup_url=None):
+    # Files are written to a .part file and renamed when complete, so an existing
+    # destination is always a full download and can be reused offline.
+    if os.path.exists(destination):
+        print(f"File already exists: {destination}")
+        return
+
     def attempt_download(download_url):
         response = requests.get(download_url, stream=True, timeout=60)
         response.raise_for_status()
         file_size = int(response.headers.get("Content-Length", 0))
-
-        if os.path.exists(destination):
-            local_size = os.path.getsize(destination)
-            if file_size and file_size == local_size:
-                print(f"File already exists and is up-to-date: {destination}")
-                return True
+        partial_path = destination + ".part"
 
         with tqdm(
             total=file_size,
@@ -68,34 +69,33 @@ def download_file(url, destination, backup_url=None):
             unit_scale=True,
             desc=os.path.basename(download_url),
         ) as progress_bar:
-            with open(destination, "wb") as output_file:
+            with open(partial_path, "wb") as output_file:
                 for chunk in response.iter_content(chunk_size=1024):
                     if chunk:
                         output_file.write(chunk)
                         progress_bar.update(len(chunk))
-        return True
+        os.replace(partial_path, destination)
 
     try:
-        if attempt_download(url):
-            return
-    except requests.exceptions.RequestException:
-        if backup_url is not None:
-            print(f"Primary URL ({url}) failed. Attempting backup URL: {backup_url}")
-            try:
-                if attempt_download(backup_url):
-                    return
-            except requests.exceptions.RequestException:
-                pass
+        attempt_download(url)
+        return
+    except requests.exceptions.RequestException as primary_error:
+        error = primary_error
 
-        backup_detail = f" and backup URL ({backup_url})" if backup_url else ""
-        print(
-            f"Failed to download from primary URL ({url}){backup_detail}.\n"
-            "Check your internet connection or the file availability.\n"
-            "For help, visit: "
-            "https://github.com/rasbt/LLMs-from-scratch/discussions/273"
-        )
-    except Exception as exc:
-        print(f"An unexpected error occurred: {exc}")
+    if backup_url is not None:
+        print(f"Primary URL ({url}) failed. Attempting backup URL: {backup_url}")
+        try:
+            attempt_download(backup_url)
+            return
+        except requests.exceptions.RequestException as backup_error:
+            error = backup_error
+
+    backup_detail = f" and backup URL ({backup_url})" if backup_url else ""
+    raise RuntimeError(
+        f"Failed to download from primary URL ({url}){backup_detail}. "
+        "Check your internet connection or the file availability. For help, visit: "
+        "https://github.com/rasbt/LLMs-from-scratch/discussions/273"
+    ) from error
 
 
 def load_gpt2_params_from_tf_ckpt(ckpt_path, settings):
