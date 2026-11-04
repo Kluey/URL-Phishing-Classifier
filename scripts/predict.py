@@ -9,7 +9,10 @@ from components.preprocessing import normalize_url
 
 
 def predict(url, model, tokenizer, device):
-    label, confidence = classify_url_name(url, model, tokenizer, device)
+    try:
+        label, confidence = classify_url_name(url, model, tokenizer, device)
+    except ValueError as exc:
+        return f"Error: {exc}"
     note = ""
     if len(tokenizer.encode(normalize_url(url), disallowed_special=())) > MAX_LEN:
         note = f" [only the first {MAX_LEN} tokens were used]"
