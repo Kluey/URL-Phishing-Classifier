@@ -18,7 +18,6 @@ dependencies = [
 
 [project.optional-dependencies]
 pretrain = ["tensorflow", "requests", "tqdm"]
-notebook = ["ipykernel", "matplotlib"]
 dev = ["pytest"]
 
 [tool.setuptools.packages.find]

@@ -101,7 +101,6 @@ pytest
 ```
 components/   model, data, training, metrics, evaluation, inference
 tests/        unit tests
-notebooks/    experiments
 data/         raw dataset and train/validation/test splits (not tracked)
 model/        trained weights and run metrics
 scripts/      train.py  evaluate.py  predict.py

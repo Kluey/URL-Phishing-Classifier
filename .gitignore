@@ -19,9 +19,6 @@ htmlcov/
 venv/
 env/
 
-# Notebooks
-.ipynb_checkpoints/
-
 # Data (large; the splits are regenerated from the raw CSV)
 data/
 
