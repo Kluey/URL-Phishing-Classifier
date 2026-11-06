@@ -62,7 +62,8 @@ def create_app(model, tokenizer, device, threshold=0.8):
         length = request.headers.get("content-length")
         if length is None:
             return await call_next(request)
-        if not length.isdigit():
+        # isascii: isdigit() alone accepts "²", which int() then rejects (500)
+        if not (length.isascii() and length.isdigit()):
             return JSONResponse({"detail": "Invalid Content-Length"}, status_code=400)
         if int(length) > MAX_BODY_BYTES:
             return JSONResponse({"detail": "Request body too large"}, status_code=413)

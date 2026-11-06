@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 import torch
 
@@ -76,3 +78,24 @@ def test_invalid_content_length_is_400(client):
     response = client.post("/v1/classify", content=b'{"host": "a.com"}',
                            headers={"content-type": "application/json", "content-length": "abc"})
     assert response.status_code == 400
+
+
+def test_non_ascii_digit_content_length_is_400(client):
+    # Sent as raw ASGI: the test client rewrites Content-Length, which would hide the bug.
+    # Headers are decoded as latin-1, so the byte 0xB2 arrives as "²", which isdigit() accepts.
+    scope = {
+        "type": "http", "method": "POST", "path": "/v1/classify", "raw_path": b"/v1/classify",
+        "query_string": b"", "root_path": "", "http_version": "1.1", "scheme": "http",
+        "server": ("test", 80), "client": ("test", 1),
+        "headers": [(b"content-type", b"application/json"), (b"content-length", b"\xb2")],
+    }
+    sent = []
+
+    async def receive():
+        return {"type": "http.request", "body": b'{"host": "a.com"}', "more_body": False}
+
+    async def send(message):
+        sent.append(message)
+
+    asyncio.run(client.app(scope, receive, send))
+    assert sent[0]["status"] == 400
