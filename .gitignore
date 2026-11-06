@@ -28,6 +28,7 @@ model/**/*.pt
 model/**/*.ckpt
 model/**/*.safetensors
 model/gpt2/
+model/parts/
 gpt2/
 
 # Editors / OS
