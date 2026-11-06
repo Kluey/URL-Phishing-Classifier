@@ -42,9 +42,16 @@ def test_classify_url_empty_raises(model):
 
 
 def test_classify_url_truncates_long_input(model):
-    url = "http://example.com/" + "a" * 5000
+    url = "http://" + "a" * 5000 + ".example.com/"
     label, _ = classify_url(url, model, get_tokenizer(), "cpu")
     assert label in LABEL_NAMES
+
+
+def test_classify_url_ignores_path_query_and_case(model):
+    tok = get_tokenizer()
+    expected = classify_url("example.com", model, tok, "cpu")
+    url = "HTTPS://WWW.Example.com/account/login?next=/x#top"
+    assert classify_url(url, model, tok, "cpu") == expected
 
 
 def test_save_and_load_roundtrip(model, tmp_path):
