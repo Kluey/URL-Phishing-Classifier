@@ -1,0 +1,14 @@
+{
+  "version": "2.0",
+  "routeKey": "$default",
+  "rawPath": "/v1/classify",
+  "rawQueryString": "",
+  "headers": {"host": "localhost", "content-type": "application/json"},
+  "requestContext": {
+    "http": {"method": "POST", "path": "/v1/classify", "protocol": "HTTP/1.1", "sourceIp": "127.0.0.1", "userAgent": "curl"},
+    "routeKey": "$default",
+    "stage": "$default"
+  },
+  "body": "{\"host\": \"paypal-login-verify.xyz\"}",
+  "isBase64Encoded": false
+}

@@ -1,0 +1,6 @@
+# Allowlist: the context is the repo root (also for CDK), so keep .venv, data and model/gpt2 out
+*
+!api/
+!components/
+!model/phishing_classifier.pth
+**/__pycache__
