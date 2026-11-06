@@ -71,6 +71,8 @@ def parse_args():
     parser.add_argument("--head-lr", type=float, default=1e-3, help="LR for the new classification head")
     parser.add_argument("--body-lr", type=float, default=5e-5, help="LR for the unfrozen pretrained layers")
     parser.add_argument("--weight-decay", type=float, default=0.1)
+    parser.add_argument("--trainable-blocks", type=int, default=1,
+                        help="how many of the last transformer blocks are fine-tuned")
     parser.add_argument("--eval-freq", type=int, default=100)
     parser.add_argument("--eval-iter", type=int, default=10)
     parser.add_argument("--seed", type=int, default=SEED)
@@ -117,7 +119,9 @@ def main():
         batch_size=args.batch_size, num_workers=args.num_workers,
     )
 
-    model = build_classifier(pretrained=True, models_dir=args.pretrained_dir)
+    model = build_classifier(
+        pretrained=True, models_dir=args.pretrained_dir, trainable_blocks=args.trainable_blocks
+    )
     model.to(device)  
     optimizer = build_optimizer(
         model, head_lr=args.head_lr, body_lr=args.body_lr, weight_decay=args.weight_decay
