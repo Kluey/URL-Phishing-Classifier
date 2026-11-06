@@ -1,4 +1,5 @@
 import math
+import urllib.request
 import warnings
 
 import numpy as np
@@ -8,17 +9,21 @@ import torch
 from sklearn.model_selection import StratifiedGroupKFold, train_test_split
 from torch.utils.data import DataLoader, Dataset, Subset
 
-from components.config import MAX_LEN, PAD_ID, SEED
+from components.config import MAX_LEN, PAD_ID, SEED, TRANCO_PATH, TRANCO_URL
 from components.preprocessing import normalize_url
 
 
 def load_urls(csv_path):
-    """Load URLs, deduplicated on the hostname the model actually sees.
+    return dedupe_urls(pd.read_csv(csv_path))
+
+
+def dedupe_urls(df):
+    """Deduplicate on the hostname the model actually sees.
 
     URLs that share a hostname count once, hostnames with conflicting labels
     are dropped, and URLs without a hostname are removed.
     """
-    df = pd.read_csv(csv_path)[["URL", "label"]]
+    df = df[["URL", "label"]]
     df = df.assign(_key=df["URL"].map(normalize_url))
     df = df[df["_key"] != ""]
     conflicting = df.groupby("_key")["label"].transform("nunique") > 1
@@ -45,8 +50,51 @@ _extract_domain = tldextract.TLDExtract(suffix_list_urls=())
 
 def registered_domain(url):
     ext = _extract_domain(url)
-    domain = f"{ext.domain}.{ext.suffix}" if ext.suffix else ext.domain
-    return domain or url
+    # A host that is itself a public suffix (gov.uk) has no domain part
+    return ".".join(part for part in (ext.domain, ext.suffix) if part) or url
+
+
+def shared_hosting_domains(df, min_hosts=5):
+    """Registered domains hosting at least min_hosts distinct phishing hostnames (web.app, repl.co, ...)."""
+    hosts = df.loc[df["label"] == 0, "URL"].map(normalize_url).drop_duplicates()
+    counts = hosts.map(registered_domain).value_counts()
+    return set(counts[counts >= min_hosts].index)
+
+
+def download_tranco(path=TRANCO_PATH, url=TRANCO_URL):
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_suffix(".part")
+        urllib.request.urlretrieve(url, partial)
+        partial.replace(path)
+    return path
+
+
+def drop_popular_phishing_hosts(df, tranco_csv, top=100_000):
+    """Drop phishing rows whose hostname is itself a top-ranked site.
+
+    PhiUSIIL labels whole URLs, so phishing pages on Google Docs, bit.ly or Dropbox make
+    hosts like docs.google.com "phishing". From the hostname alone they are not.
+    """
+    ranked = pd.read_csv(tranco_csv, header=None, names=["rank", "host"], nrows=top)["host"]
+    popular = df["URL"].map(normalize_url).isin(set(ranked.map(normalize_url)))
+    return df[~(popular & (df["label"] == 0))]
+
+
+def tranco_subdomains(tranco_csv, exclude_domains=(), max_per_domain=5):
+    """Legitimate hostnames that have a subdomain, from a Tranco list, as URL/label rows.
+
+    PhiUSIIL has almost no legitimate subdomains, which teaches the model that any
+    subdomain means phishing. Hosts are kept in rank order, at most max_per_domain
+    per registered domain, skipping excluded domains and reverse-DNS (.arpa) entries.
+    """
+    hosts = pd.read_csv(tranco_csv, header=None, names=["rank", "host"])["host"].map(normalize_url)
+    has_subdomain = hosts.map(lambda h: bool(_extract_domain(h).subdomain))
+    reg = hosts.map(registered_domain)
+    keep = has_subdomain & ~reg.isin(set(exclude_domains)) & ~hosts.str.endswith(".arpa")
+    kept = pd.DataFrame({"URL": hosts[keep], "reg": reg[keep]})
+    kept = kept.groupby("reg", sort=False).head(max_per_domain)
+    return pd.DataFrame({"URL": kept["URL"].to_numpy(), "label": 1})
 
 
 def domain_overlap(train_df, other_df):
