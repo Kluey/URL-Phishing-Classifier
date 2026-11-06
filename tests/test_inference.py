@@ -4,7 +4,7 @@ import torch
 from components.config import LABEL_NAMES, NUM_CLASSES
 from components.inference import (
     build_classifier, classify_url, classify_url_name, get_tokenizer,
-    load_classifier, save_classifier,
+    load_classifier, phishing_probability, save_classifier,
 )
 
 
@@ -57,6 +57,25 @@ def test_classify_url_ignores_path_query_and_case(model):
     expected = classify_url("example.com", model, tok, "cpu")
     url = "HTTPS://WWW.Example.com/account/login?next=/x#top"
     assert classify_url(url, model, tok, "cpu") == expected
+
+
+@pytest.mark.parametrize("url", ["example.com", "http://paypa1-secure.example.com/verify"])
+def test_phishing_probability_matches_classify_url(model, url):
+    tok = get_tokenizer()
+    label, conf = classify_url(url, model, tok, "cpu")
+    p = phishing_probability(url, model, tok, "cpu")
+    assert p == pytest.approx(conf if label == 0 else 1 - conf, abs=1e-6)
+
+
+def test_phishing_probability_uses_hostname_only(model):
+    tok = get_tokenizer()
+    expected = phishing_probability("example.com", model, tok, "cpu")
+    assert phishing_probability("https://www.Example.com/login?x=1", model, tok, "cpu") == expected
+
+
+def test_phishing_probability_empty_raises(model):
+    with pytest.raises(ValueError):
+        phishing_probability("https://", model, get_tokenizer(), "cpu")
 
 
 def test_save_and_load_roundtrip(model, tmp_path):

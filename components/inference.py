@@ -48,16 +48,25 @@ def get_tokenizer():
 
 
 @torch.inference_mode()
-def classify_url(url, model, tokenizer, device, max_length=MAX_LEN):
+def _class_probs(url, model, tokenizer, device, max_length):
     model.eval()
     supported = model.pos_emb.weight.shape[0]
     ids = tokenizer.encode(normalize_url(url), disallowed_special=())[:min(max_length, supported)]
     if not ids:
         raise ValueError("Cannot classify an empty URL")
     input_tensor = torch.tensor(ids, device=device).unsqueeze(0)
-    probs = torch.softmax(last_real_token_logits(model, input_tensor), dim=-1)[0]
+    return torch.softmax(last_real_token_logits(model, input_tensor), dim=-1)[0]
+
+
+def classify_url(url, model, tokenizer, device, max_length=MAX_LEN):
+    probs = _class_probs(url, model, tokenizer, device, max_length)
     label = int(probs.argmax())
     return label, probs[label].item()
+
+
+def phishing_probability(url, model, tokenizer, device, max_length=MAX_LEN):
+    """P(phishing) for the URL's hostname; label 0 is phishing, so this is the class-0 probability."""
+    return _class_probs(url, model, tokenizer, device, max_length)[0].item()
 
 
 def classify_url_name(url, model, tokenizer, device, max_length=MAX_LEN):
