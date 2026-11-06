@@ -23,10 +23,10 @@ env/
 data/
 
 # Model artifacts (large). Small *.json run files stay tracked.
-model/*.pth
-model/*.pt
-model/*.ckpt
-model/*.safetensors
+model/**/*.pth
+model/**/*.pt
+model/**/*.ckpt
+model/**/*.safetensors
 model/gpt2/
 gpt2/
 
