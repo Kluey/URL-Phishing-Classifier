@@ -41,7 +41,7 @@ def prepare_data(n_samples, seed, split_by):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune GPT-2 as a phishing URL classifier")
-    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--head-lr", type=float, default=1e-3, help="LR for the new classification head")
     parser.add_argument("--body-lr", type=float, default=5e-5, help="LR for the unfrozen pretrained layers")
@@ -52,8 +52,9 @@ def parse_args():
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--prepare-data", action="store_true",
                         help="rebuild train/validation/test CSVs from the raw dataset ")
-    parser.add_argument("--n-samples", type=int, default=20_000,
-                        help="balanced subset size used by --prepare-data")
+    parser.add_argument("--n-samples", type=int, default=None,
+                        help="balanced subset size used by --prepare-data (default: all, "
+                             "limited by the smaller class)")
     parser.add_argument("--split-by", choices=("domain", "url"), default="domain",
                         help="domain: no registered domain appears in more than one split; "
                              "url: random split (can leak domains across splits)")

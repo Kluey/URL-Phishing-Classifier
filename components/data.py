@@ -13,10 +13,10 @@ from components.preprocessing import normalize_url
 
 
 def load_urls(csv_path):
-    """Load URLs, deduplicated on the normalized text the model actually sees.
+    """Load URLs, deduplicated on the hostname the model actually sees.
 
-    Spellings that normalize to the same input (scheme, www.) count once, inputs
-    with conflicting labels are dropped, and URLs that normalize to "" are removed.
+    URLs that share a hostname count once, hostnames with conflicting labels
+    are dropped, and URLs without a hostname are removed.
     """
     df = pd.read_csv(csv_path)[["URL", "label"]]
     df = df.assign(_key=df["URL"].map(normalize_url))
@@ -25,8 +25,11 @@ def load_urls(csv_path):
     return df[~conflicting].drop_duplicates(subset="_key").drop(columns="_key")
 
 
-def balanced_subset(df, n_total, label_col="label", random_state=SEED):
-    per_class = min(n_total // 2, df[label_col].value_counts().min())
+def balanced_subset(df, n_total=None, label_col="label", random_state=SEED):
+    """Equal-sized random sample per class; n_total=None uses as much as the smaller class allows."""
+    per_class = df[label_col].value_counts().min()
+    if n_total is not None:
+        per_class = min(n_total // 2, per_class)
     parts = [
         df[df[label_col] == label].sample(n=per_class, random_state=random_state)
         for label in (0, 1)
