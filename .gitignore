@@ -35,3 +35,6 @@ gpt2/
 .idea/
 .DS_Store
 Thumbs.db
+
+CLAUDE.md
+docs/*
