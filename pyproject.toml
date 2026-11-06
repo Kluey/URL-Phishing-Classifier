@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 pretrain = ["tensorflow", "requests", "tqdm"]
 dev = ["pytest"]
+api = ["fastapi", "mangum", "uvicorn", "httpx"]
 
 [tool.setuptools.packages.find]
 include = ["components*"]
