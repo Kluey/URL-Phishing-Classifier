@@ -1,11 +1,13 @@
 import argparse
 import json
 import sys
+
+import numpy as np
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from components.config import DATA_DIR, MAX_LEN, WEIGHTS_PATH
+from components.config import DATA_DIR, MAX_LEN, REAL_WORLD_PATH, WEIGHTS_PATH
 from components.data import PhishingDataset, make_eval_loader
 from components.evaluation import compute_metrics
 from components.inference import get_tokenizer, load_classifier
@@ -14,7 +16,8 @@ from components.metrics import predict_proba_loader
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate a trained phishing URL classifier")
-    parser.add_argument("--split", choices=("validation", "test"), default="test")
+    parser.add_argument("--split", choices=("validation", "test", "real_world"), default="test",
+                        help="real_world: tracked list of everyday URLs with paths (eval/)")
     parser.add_argument("--weights", type=Path, default=WEIGHTS_PATH)
     parser.add_argument("--threshold", type=float, default=0.5,
                         help="P(phishing) above this is classified as phishing")
@@ -28,7 +31,7 @@ def main():
 
     if not args.weights.exists():
         sys.exit(f"No trained model found at {args.weights}. Run train.py first.")
-    csv_path = DATA_DIR / f"{args.split}.csv"
+    csv_path = REAL_WORLD_PATH if args.split == "real_world" else DATA_DIR / f"{args.split}.csv"
     if not csv_path.exists():
         sys.exit(f"Missing {csv_path}. Run train.py first to create the data splits.")
 
@@ -45,6 +48,13 @@ def main():
           f"phishing = positive class, threshold {args.threshold}):")
     for name, value in metrics.items():
         print(f"  {name:<24}{'n/a' if value is None else f'{value:.4f}'}")
+
+    if args.split == "real_world":
+        pred = np.where(p_phish > args.threshold, 0, 1)
+        errors = dataset.data.assign(p_phish=p_phish)[pred != labels]
+        print(f"\nMisclassified ({len(errors)}):")
+        for row in errors.itertuples():
+            print(f"  {row.p_phish:.3f}  label={row.label}  {row.URL}")
 
     metrics_path = args.weights.with_suffix(f".{args.split}_metrics.json")
     with open(metrics_path, "w") as f:

@@ -9,7 +9,8 @@ from components.gpt.model import GPTModel
 from components.preprocessing import normalize_url
 
 
-def build_classifier(pretrained=False, models_dir="gpt2"):
+def build_classifier(pretrained=False, models_dir="gpt2", trainable_blocks=1):
+    """GPT-2 with a 2-class head; only the head, final norm and last trainable_blocks blocks train."""
     model = GPTModel(MODEL_CONFIG)
     if pretrained:
         from components.gpt.load_gpt2 import download_and_load_gpt2, load_weights_into_gpt
@@ -21,7 +22,7 @@ def build_classifier(pretrained=False, models_dir="gpt2"):
     for p in model.parameters():
         p.requires_grad = False
     model.out_head = torch.nn.Linear(MODEL_CONFIG["emb_dim"], NUM_CLASSES)
-    for p in model.trf_blocks[-1].parameters():
+    for p in model.trf_blocks[-trainable_blocks:].parameters():
         p.requires_grad = True
     for p in model.final_norm.parameters():
         p.requires_grad = True

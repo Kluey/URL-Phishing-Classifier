@@ -3,7 +3,8 @@ import pandas as pd
 import pytest
 
 from components.data import (
-    PhishingDataset, balanced_subset, domain_overlap, load_urls, registered_domain, split_dataset,
+    PhishingDataset, balanced_subset, domain_overlap, drop_popular_phishing_hosts, load_urls, registered_domain,
+    shared_hosting_domains, split_dataset, tranco_subdomains,
 )
 from components.inference import get_tokenizer
 
@@ -27,6 +28,7 @@ def urls_df():
         ("https://foo.weebly.com/login", "weebly.com"),
         ("https://www.google.com/search?q=1", "google.com"),
         ("http://192.168.1.1/login", "192.168.1.1"),
+        ("gov.uk", "gov.uk"),
     ],
 )
 def test_registered_domain(url, expected):
@@ -84,3 +86,36 @@ def test_dataset_rejects_urls_that_normalize_to_empty(tmp_path):
 def test_domain_split_warns_when_fractions_are_rounded(urls_df):
     with pytest.warns(UserWarning, match="steps of"):
         split_dataset(urls_df, train_frac=0.75, validation_frac=0.05)
+
+
+def test_tranco_subdomains_filters_and_caps(tmp_path):
+    csv = tmp_path / "tranco.csv"
+    hosts = ["google.com", "mail.google.com", "www.example.org", "a.example.org", "b.example.org",
+             "c.example.org", "x.web.app", "1.2.in-addr.arpa", "docs.python.org"]
+    pd.DataFrame({"rank": range(1, len(hosts) + 1), "host": hosts}).to_csv(csv, header=False, index=False)
+    extra = tranco_subdomains(csv, exclude_domains={"web.app", "python.org"}, max_per_domain=2)
+    assert extra["URL"].tolist() == ["mail.google.com", "a.example.org", "b.example.org"]
+    assert set(extra["label"]) == {1}
+
+
+def test_drop_popular_phishing_hosts_keeps_legit_and_unranked(tmp_path):
+    csv = tmp_path / "tranco.csv"
+    pd.DataFrame({"rank": [1, 2, 3], "host": ["google.com", "docs.google.com", "rare.example"]}) \
+        .to_csv(csv, header=False, index=False)
+    df = pd.DataFrame({
+        "URL": ["https://docs.google.com/forms/x", "https://www.google.com", "https://rare.example/p",
+                "https://evil-login.example/"],
+        "label": [0, 1, 0, 0],
+    })
+    kept = drop_popular_phishing_hosts(df, csv, top=2)
+    assert kept["URL"].tolist() == ["https://www.google.com", "https://rare.example/p", "https://evil-login.example/"]
+
+
+def test_shared_hosting_domains_counts_distinct_phishing_hosts():
+    df = pd.DataFrame({
+        "URL": [f"https://p{i}.web.app/x" for i in range(5)] + ["https://p0.web.app/y"]
+               + [f"https://s{i}.blogspot.com" for i in range(4)]
+               + [f"https://l{i}.example.com" for i in range(9)],
+        "label": [0] * 10 + [1] * 9,
+    })
+    assert shared_hosting_domains(df, min_hosts=5) == {"web.app"}

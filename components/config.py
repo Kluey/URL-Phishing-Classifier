@@ -4,6 +4,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "PhiUSIIL_Phishing_URL_Dataset.csv"
 WEIGHTS_PATH = PROJECT_ROOT / "model/phishing_classifier.pth"
+# Small tracked list of everyday URLs (with paths) to catch shortcut learning
+REAL_WORLD_PATH = PROJECT_ROOT / "eval/real_world_urls.csv"
+# Tranco top-sites list including subdomains, pinned so the training data can be rebuilt exactly
+TRANCO_LIST_ID = "V355N"
+TRANCO_URL = f"https://tranco-list.eu/download/{TRANCO_LIST_ID}/1000000"
+TRANCO_PATH = DATA_DIR / f"tranco_{TRANCO_LIST_ID}.csv"
 
 MODEL = "gpt2-small (124M)"
 MODEL_CONFIG = {

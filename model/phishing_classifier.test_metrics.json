@@ -1,18 +1,18 @@
 {
-  "weights": "C:\\Users\\User\\Documents\\projects\\url-phishing-classifier\\model\\phishing_classifier.pth",
+  "weights": "/content/URL-Phishing-Classifier/model/phishing_classifier.pth",
   "split": "test",
   "threshold": 0.5,
-  "num_examples": 4000,
+  "num_examples": 34329,
   "metrics": {
-    "accuracy": 0.8765,
-    "precision_phishing": 0.9682835820895522,
-    "recall_phishing": 0.7785,
-    "false_positive_rate": 0.0255,
-    "mcc": 0.7678941552287678,
-    "brier": 0.09218016266822815,
-    "roc_auc": 0.930112125,
-    "pr_auc": 0.9494291179431205,
-    "recall_at_1.0%_fpr": 0.7495,
-    "recall_at_0.1%_fpr": 0.6825
+    "accuracy": 0.8036645401846835,
+    "precision_phishing": 0.8849838100377766,
+    "recall_phishing": 0.7226506555029195,
+    "false_positive_rate": 0.1054095826893354,
+    "mcc": 0.6220244375034208,
+    "brier": 0.13618508653145647,
+    "roc_auc": 0.8869032384618019,
+    "pr_auc": 0.9145378591000392,
+    "recall_at_1.0%_fpr": 0.4866696044948772,
+    "recall_at_0.1%_fpr": 0.3132092100914399
   }
 }
