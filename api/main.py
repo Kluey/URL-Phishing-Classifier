@@ -14,6 +14,9 @@ from components.config import WEIGHTS_PATH
 from components.inference import get_tokenizer, load_classifier
 
 logging.basicConfig(level=logging.INFO)
+# The Lambda runtime installs its own root handler, so basicConfig is a no-op there and the
+# root level stays at WARNING; set it explicitly so the count/latency lines reach CloudWatch.
+logging.getLogger().setLevel(logging.INFO)
 
 threshold = float(os.environ.get("THRESHOLD", "0.8"))
 if not 0.0 < threshold < 1.0:

@@ -70,3 +70,9 @@ def test_body_too_large_is_413(client):
     big = '{"host": "' + "a" * MAX_BODY_BYTES + '"}'
     response = client.post("/v1/classify", content=big, headers={"content-type": "application/json"})
     assert response.status_code == 413
+
+
+def test_invalid_content_length_is_400(client):
+    response = client.post("/v1/classify", content=b'{"host": "a.com"}',
+                           headers={"content-type": "application/json", "content-length": "abc"})
+    assert response.status_code == 400

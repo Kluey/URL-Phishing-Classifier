@@ -55,10 +55,16 @@ def create_app(model, tokenizer, device, threshold=0.8):
         label = LABEL_NAMES[0] if p >= threshold else LABEL_NAMES[1]
         return host, p, label
 
+    # Checks the declared length only, so a chunked body gets past it; Pydantic's length
+    # limits still apply, and on Lambda the HTTP API always delivers a complete body.
     @app.middleware("http")
     async def limit_body_size(request: Request, call_next):
         length = request.headers.get("content-length")
-        if length is not None and int(length) > MAX_BODY_BYTES:
+        if length is None:
+            return await call_next(request)
+        if not length.isdigit():
+            return JSONResponse({"detail": "Invalid Content-Length"}, status_code=400)
+        if int(length) > MAX_BODY_BYTES:
             return JSONResponse({"detail": "Request body too large"}, status_code=413)
         return await call_next(request)
 
