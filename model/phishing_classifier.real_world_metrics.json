@@ -1,0 +1,18 @@
+{
+  "weights": "C:\\Users\\User\\Documents\\projects\\url-phishing-classifier\\model\\phishing_classifier.pth",
+  "split": "real_world",
+  "threshold": 0.5,
+  "num_examples": 70,
+  "metrics": {
+    "accuracy": 0.9714285714285714,
+    "precision_phishing": 0.9090909090909091,
+    "recall_phishing": 1.0,
+    "false_positive_rate": 0.04,
+    "mcc": 0.9341987329938275,
+    "brier": 0.04913761839270592,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0000000000000002,
+    "recall_at_1.0%_fpr": 1.0,
+    "recall_at_0.1%_fpr": 1.0
+  }
+}

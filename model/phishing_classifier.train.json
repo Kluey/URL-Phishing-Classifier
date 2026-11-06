@@ -1,0 +1,28 @@
+{
+  "args": {
+    "epochs": 2,
+    "batch_size": 32,
+    "head_lr": 0.001,
+    "body_lr": 5e-05,
+    "weight_decay": 0.1,
+    "trainable_blocks": 1,
+    "eval_freq": 100,
+    "eval_iter": 10,
+    "seed": 123,
+    "num_workers": 0,
+    "prepare_data": true,
+    "pretrained_dir": "/content/gpt2",
+    "output": "/content/URL-Phishing-Classifier/model/phishing_classifier.pth"
+  },
+  "splits": {
+    "n_samples": null,
+    "seed": 123,
+    "split_by": "domain",
+    "tranco_list": "V355N"
+  },
+  "val_accuracy_per_epoch": [
+    0.7697552573028063,
+    0.7779372712265844
+  ],
+  "minutes": 2.4987185750666714
+}
