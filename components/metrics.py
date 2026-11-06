@@ -5,11 +5,16 @@ from torch.utils.data import Subset
 from components.config import PAD_ID
 
 
+def _use_bf16(device):
+    # bf16 autocast needs Ampere (compute capability 8.0) or newer; e.g. Colab's T4 runs in fp32
+    return device.type == "cuda" and torch.cuda.get_device_capability(device)[0] >= 8
+
+
 def last_real_token_logits(model, input_batch, pad_id=PAD_ID):
     with torch.autocast(
         device_type=input_batch.device.type,
         dtype=torch.bfloat16,
-        enabled=input_batch.is_cuda,
+        enabled=_use_bf16(input_batch.device),
     ):
         logits = model(input_batch)
     last_idx = (input_batch != pad_id).sum(dim=1).clamp(min=1) - 1
