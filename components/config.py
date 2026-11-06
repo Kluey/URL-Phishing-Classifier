@@ -4,6 +4,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "PhiUSIIL_Phishing_URL_Dataset.csv"
 WEIGHTS_PATH = PROJECT_ROOT / "model/phishing_classifier.pth"
+# Small tracked list of everyday URLs (with paths) to catch shortcut learning
+REAL_WORLD_PATH = PROJECT_ROOT / "eval/real_world_urls.csv"
 
 MODEL = "gpt2-small (124M)"
 MODEL_CONFIG = {
