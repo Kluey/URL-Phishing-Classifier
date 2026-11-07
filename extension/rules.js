@@ -35,10 +35,37 @@ export function isIpv6(host) {
   return host.includes(":");
 }
 
+// "::ffff:192.168.1.1" -> [0, 0, 0, 0, 0, 0xffff, 0xc0a8, 0x101]; null if malformed
+function parseIpv6(host) {
+  let groups = host.split(":");
+  const last = groups[groups.length - 1];
+  if (last.includes(".")) {
+    const v4 = parseIpv4(last);
+    if (!v4) return null;
+    groups = [...groups.slice(0, -1), ((v4[0] << 8) | v4[1]).toString(16), ((v4[2] << 8) | v4[3]).toString(16)];
+  }
+  const gap = groups.indexOf("");
+  if (gap !== -1) {
+    // "::" splits into empty strings at the gap (two at either end)
+    const head = groups.slice(0, gap);
+    const tail = groups.slice(groups.lastIndexOf("") + 1);
+    if (head.length + tail.length > 7) return null;
+    groups = [...head, ...Array(8 - head.length - tail.length).fill("0"), ...tail];
+  }
+  if (groups.length !== 8 || !groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return null;
+  return groups.map((g) => parseInt(g, 16));
+}
+
 function isPrivateIpv6(host) {
-  if (host === "::1" || host === "::") return true;
-  const first = parseInt(host.split(":")[0] || "0", 16);
-  return (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+  const h = parseIpv6(host);
+  if (!h) return true; // not a real address: never send it
+  const zerosUpTo = (n) => h.slice(0, n).every((x) => x === 0);
+  if (zerosUpTo(7) && h[7] <= 1) return true; // :: and ::1
+  // IPv4-mapped ::ffff:a.b.c.d: private if the IPv4 address is
+  if (zerosUpTo(5) && h[5] === 0xffff) {
+    return isPrivateIpv4([h[6] >> 8, h[6] & 0xff, h[7] >> 8, h[7] & 0xff]);
+  }
+  return (h[0] & 0xfe00) === 0xfc00 || (h[0] & 0xffc0) === 0xfe80;
 }
 
 function isSkipped(host) {

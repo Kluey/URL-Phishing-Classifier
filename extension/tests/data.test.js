@@ -18,11 +18,25 @@ test("allowlist and shared platforms don't overlap", () => {
   assert.ok(allowlist.length > 9000, `allowlist has ${allowlist.length} domains`);
 });
 
+test("no public suffix is allowlisted or shared", () => {
+  // A suffix entry would cover every site under it, e.g. "co.uk" allowing paypal-verify.co.uk
+  const suffixes = ["co.uk", "com.au", "com.br", "co.za", "co.jp", "com.cn", "gov.uk", "ac.uk", "my.id", "ne.jp", "co.in", "com"];
+  for (const list of [allowlist, shared]) {
+    assert.deepEqual(list.filter((d) => suffixes.includes(d)), []);
+  }
+  for (const host of ["paypal-verify.co.uk", "login.com.br", "evil.my.id"]) {
+    assert.equal(verdictFor(host), "check", host);
+  }
+});
+
 test("everyday sites are allowed and hosting platforms are shared", () => {
   for (const host of ["google.com", "mail.google.com", "wikipedia.org", "en.wikipedia.org", "github.com"]) {
     assert.equal(verdictFor(host), "allow", host);
   }
-  for (const host of ["sites.google.com", "foo.web.app", "someone.github.io", "bit.ly"]) {
+  for (const host of [
+    "sites.google.com", "foo.web.app", "someone.github.io", "bit.ly", "storage.googleapis.com",
+    "x-y-z.trycloudflare.com", "someone.gitlab.io", "blog.wordpress.com", "cutt.ly", "forms.gle",
+  ]) {
     assert.equal(verdictFor(host), "shared", host);
   }
 });

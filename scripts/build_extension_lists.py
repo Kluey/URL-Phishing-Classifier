@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import tldextract
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -30,19 +31,43 @@ HOSTING_PLATFORMS = {
     "netlify.app", "vercel.app", "blogspot.com", "weebly.com", "wixsite.com", "herokuapp.com",
     "azurewebsites.net", "amazonaws.com", "cloudfront.net", "r2.dev", "glitch.me", "repl.co",
     "ngrok-free.app",
+    # In the Tranco top 10k, so without this they would be allowlisted
+    "googleapis.com", "azureedge.net", "azurestaticapps.net", "trycloudflare.com", "fly.dev",
+    "railway.app", "gitlab.io", "readthedocs.io", "notion.site", "wordpress.com", "carrd.co",
+    "jimdo.com", "squarespace.com", "tilda.ws", "hostingersite.com", "narod.ru", "ucoz.net",
+    "ucoz.ru", "force.com", "salesforce-sites.com", "gumroad.com", "teachable.com",
+    # Form builders and mailing-list links
+    "jotform.com", "typeform.com", "formstack.com", "list-manage.com", "mailchi.mp",
+    # Free dynamic DNS
+    "no-ip.com", "hopto.org", "zapto.org", "sytes.net", "afraid.org", "mooo.com",
 }
 # The hostname of a short link says nothing about where it goes
-URL_SHORTENERS = {"bit.ly", "t.co", "tinyurl.com", "goo.gl", "ow.ly", "is.gd", "rebrand.ly"}
+URL_SHORTENERS = {
+    "bit.ly", "t.co", "tinyurl.com", "goo.gl", "ow.ly", "is.gd", "rebrand.ly", "t.ly", "cutt.ly",
+    "shorturl.at", "rb.gy", "tiny.cc", "lnkd.in", "forms.gle", "linktr.ee", "me-qr.com",
+}
 # Reviewed by hand: PhiUSIIL labels the company's own subdomains (ftp., labs., kr.) as phishing,
 # which is label noise, not a platform where anyone can publish
 NOT_SHARED = {"binance.com"}
+
+# Same offline suffix list as components.data.registered_domain
+_extract = tldextract.TLDExtract(suffix_list_urls=())
+
+
+def is_public_suffix(host):
+    return not _extract(host).domain
 
 
 def top_registered_domains(tranco_csv, n):
     hosts = pd.read_csv(tranco_csv, header=None, names=["rank", "host"])["host"]
     seen, domains = set(), []
     for host in hosts:
-        domain = registered_domain(normalize_url(host))
+        host = normalize_url(host)
+        # A Tranco entry that is itself a public suffix (co.uk, my.id) would allow
+        # every site under it, because rules.js matches parent suffixes
+        if is_public_suffix(host):
+            continue
+        domain = registered_domain(host)
         if not domain or domain.endswith(".arpa") or domain in seen:
             continue
         seen.add(domain)
