@@ -55,7 +55,7 @@ async function classifyChunk(hosts, opts) {
 }
 
 // Returns one result per host, in order, plus whether any chunk got no answer at all.
-// Chunks run one after another to stay under the API's throttling (10 rps) and reserved concurrency.
+// Chunks run one after another to stay under the API's throttling (5 rps) and reserved concurrency.
 export async function classifyBatchDetailed(hosts, { apiUrl, fetchFn = fetch, ...rest }) {
   const opts = { ...DEFAULTS, ...rest, apiUrl, fetchFn };
   const results = [];

@@ -37,7 +37,7 @@ async function readCache(hosts) {
 }
 
 // One API request at a time across all tabs and messages. content.js sends a busy page as
-// many 32-host messages, and sending them at once would trip the stage throttle (10 rps).
+// many 32-host messages, and sending them at once would trip the stage throttle (5 rps).
 let apiQueue = Promise.resolve();
 function serialized(fn) {
   const run = apiQueue.then(fn, fn);
