@@ -20,7 +20,7 @@ venv/
 env/
 
 # Data (large; the splits are regenerated from the raw CSV)
-data/
+/data/
 
 # Model artifacts (large). Small *.json run files stay tracked.
 model/**/*.pth

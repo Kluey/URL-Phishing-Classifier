@@ -1,0 +1,124 @@
+/* Loaded into the content script's closed shadow root, so page styles can't reach it. */
+
+:host {
+  all: initial;
+}
+
+.tip,
+.dialog {
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #1f2328;
+  box-sizing: border-box;
+}
+
+.tip {
+  position: fixed;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  pointer-events: none;
+  overflow-wrap: anywhere;
+}
+
+.tip[hidden] {
+  display: none;
+}
+
+.tip.danger {
+  background: #b42318;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tip.neutral {
+  background: #57606a;
+  color: #fff;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.dialog {
+  width: min(460px, 100%);
+  padding: 20px 22px;
+  border-radius: 10px;
+  border-top: 6px solid #b42318;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  font-size: 14px;
+}
+
+.dialog h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #b42318;
+}
+
+.dialog p {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.dialog .note {
+  color: #57606a;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+button {
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button.back {
+  border: 1px solid #1a7f37;
+  background: #1a7f37;
+  color: #fff;
+  font-weight: 600;
+}
+
+button.open {
+  border: 1px solid #d0d7de;
+  background: #f6f8fa;
+  color: #57606a;
+}
+
+button:focus-visible {
+  outline: 3px solid #0969da;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tip,
+  .dialog {
+    color: #e6edf3;
+  }
+  .dialog {
+    background: #161b22;
+  }
+  .dialog .note {
+    color: #8d96a0;
+  }
+  button.open {
+    border-color: #30363d;
+    background: #21262d;
+    color: #8d96a0;
+  }
+}
