@@ -26,9 +26,14 @@ namespace Infra
     {
         public const int MemoryMb = 3008;
         public const int ReservedConcurrency = 5;
-        // The stage limits must not exceed what the function can run at once: a request that
-        // passes the stage but finds no free instance is throttled by Lambda, and HTTP API
-        // returns that as 503 instead of 429 (Day 7 burst test: 45 of 50 got 503 at burst 20).
+        // A request that passes the stage but finds no free instance is throttled by Lambda, and
+        // HTTP API returns that as 503, not 429. Keeping the stage limits at or below reserved
+        // concurrency caps the sustained rate, but it does not turn excess into 429s:
+        // - stage throttling is best-effort, so a simultaneous burst mostly gets past it
+        //   (Day 7, 50 at once: 5x200, 1x429, 44x503 at 5/5; 5x200, 45x503 at 10/20);
+        // - concurrency is rate x latency, so 5 rps of requests that take longer than 1 s
+        //   (cold starts, 32-host batches at ~2.8 s) still exceeds 5 executions.
+        // Excess load therefore gets fast 503s, at no cost; the extension retries 5xx and 429 once.
         public const double RateLimit = 5;
         public const int BurstLimit = ReservedConcurrency;
 

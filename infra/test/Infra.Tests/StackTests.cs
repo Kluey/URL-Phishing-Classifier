@@ -69,8 +69,10 @@ public class ApiStackTests
     }
 
     [Fact]
-    // Excess load must get 429 from the stage, not 503 from a throttled Lambda
-    public void Stage_burst_fits_reserved_concurrency()
+    // The stage may not admit more than the function can run at once. This is a ceiling, not a
+    // guarantee of 429s: stage throttling is best-effort and requests slower than 1 s still
+    // overlap (see the comment on ApiStack.RateLimit)
+    public void Stage_limits_do_not_exceed_reserved_concurrency()
     {
         Assert.True(ApiStack.BurstLimit <= ApiStack.ReservedConcurrency);
         Assert.True(ApiStack.RateLimit <= ApiStack.ReservedConcurrency);

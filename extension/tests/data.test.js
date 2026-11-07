@@ -1,6 +1,6 @@
 // Checks the committed lists (built by scripts/build_extension_lists.py) and the manifest.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { API_URL } from "../config.js";
@@ -55,4 +55,10 @@ test("no synthetic phishing host from the real-world check is allowlisted", () =
 test("host_permissions covers exactly the configured API", () => {
   assert.deepEqual(manifest.host_permissions, [`${API_URL}/*`]);
   assert.equal(manifest.background.type, "module");
+});
+
+test("every icon in the manifest exists", () => {
+  const paths = [...Object.values(manifest.icons), ...Object.values(manifest.action.default_icon)];
+  assert.ok(paths.length >= 4);
+  for (const path of paths) assert.ok(existsSync(new URL(`../${path}`, import.meta.url)), path);
 });

@@ -2,11 +2,14 @@
 
 export const MAX_BATCH = 32;
 const PHISHING_LABEL = "Phishing"; // components.config.LABEL_NAMES[0]
-const UNKNOWN = Object.freeze({ verdict: "unknown" });
+export const UNKNOWN = Object.freeze({ verdict: "unknown" });
 
 // A cold Lambda takes ~10–15 s to start. The first request usually times out but still starts
 // an instance, so one retry with a longer timeout tends to land on it.
-const DEFAULTS = { timeoutMs: 3000, retryDelayMs: 1500, retryTimeoutMs: 8000 };
+// The server scores one host at a time: a warm batch of 32 takes ~2.8 s end to end (Day 7), so
+// both timeouts grow by perHostMs per host. A timeout on a warm instance would abort only the
+// client, and the retry would double the load on the API's 5 concurrent executions.
+const DEFAULTS = { timeoutMs: 3000, retryDelayMs: 1500, retryTimeoutMs: 8000, perHostMs: 100 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -45,16 +48,19 @@ async function attempt(hosts, { apiUrl, fetchFn, timeoutMs }) {
 }
 
 async function classifyChunk(hosts, opts) {
-  let out = await attempt(hosts, { ...opts, timeoutMs: opts.timeoutMs });
+  const extraMs = opts.perHostMs * hosts.length;
+  let out = await attempt(hosts, { ...opts, timeoutMs: opts.timeoutMs + extraMs });
   if (!out.results && out.retry) {
     await sleep(opts.retryDelayMs);
-    out = await attempt(hosts, { ...opts, timeoutMs: opts.retryTimeoutMs });
+    out = await attempt(hosts, { ...opts, timeoutMs: opts.retryTimeoutMs + extraMs });
   }
-  // Never block the page: no answer means unknown
-  return { results: out.results ?? hosts.map(() => UNKNOWN), failed: !out.results };
+  // Never block the page: no answer means unknown. Only a failure that could have passed on a
+  // retry (5xx, 429, network, timeout) counts as "failed": a 4xx or a malformed body is specific
+  // to this request and says nothing about whether the API is up.
+  return { results: out.results ?? hosts.map(() => UNKNOWN), failed: !out.results && out.retry };
 }
 
-// Returns one result per host, in order, plus whether any chunk got no answer at all.
+// Returns one result per host, in order, plus whether any chunk found the API unavailable.
 // Chunks run one after another to stay under the API's throttling (5 rps) and reserved concurrency.
 export async function classifyBatchDetailed(hosts, { apiUrl, fetchFn = fetch, ...rest }) {
   const opts = { ...DEFAULTS, ...rest, apiUrl, fetchFn };
