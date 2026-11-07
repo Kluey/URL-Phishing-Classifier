@@ -1,0 +1,100 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793941840.961110   23871 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+I0000 00:00:1793941841.028505   23871 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793941843.405639   23871 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+I0000 00:00:1793941843.406176   23871 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+Device: cuda
+Dropped 3621 phishing URLs whose hostname is a top Tranco site
+Adding 82910 legitimate subdomain hosts from Tranco list V355N
+Prepared domain-level splits: 119540 train / 13933 val / 34329 test
+URLs whose domain also appears in train: validation 0.0%, test 0.0%
+File already exists: /content/gpt2/124M/checkpoint
+File already exists: /content/gpt2/124M/encoder.json
+File already exists: /content/gpt2/124M/hparams.json
+File already exists: /content/gpt2/124M/model.ckpt.data-00000-of-00001
+File already exists: /content/gpt2/124M/model.ckpt.index
+File already exists: /content/gpt2/124M/model.ckpt.meta
+File already exists: /content/gpt2/124M/vocab.bpe
+Ep 1 (Step 000000): Train loss 0.709, Val loss 0.696
+Ep 1 (Step 000100): Train loss 0.516, Val loss 0.587
+Ep 1 (Step 000200): Train loss 0.487, Val loss 0.531
+Ep 1 (Step 000300): Train loss 0.482, Val loss 0.508
+Ep 1 (Step 000400): Train loss 0.429, Val loss 0.513
+Ep 1 (Step 000500): Train loss 0.430, Val loss 0.494
+Ep 1 (Step 000600): Train loss 0.425, Val loss 0.500
+Ep 1 (Step 000700): Train loss 0.439, Val loss 0.489
+Ep 1 (Step 000800): Train loss 0.385, Val loss 0.497
+Ep 1 (Step 000900): Train loss 0.323, Val loss 0.484
+Ep 1 (Step 001000): Train loss 0.412, Val loss 0.497
+Ep 1 (Step 001100): Train loss 0.431, Val loss 0.531
+Ep 1 (Step 001200): Train loss 0.395, Val loss 0.494
+Ep 1 (Step 001300): Train loss 0.388, Val loss 0.507
+Ep 1 (Step 001400): Train loss 0.370, Val loss 0.483
+Ep 1 (Step 001500): Train loss 0.376, Val loss 0.471
+Ep 1 (Step 001600): Train loss 0.351, Val loss 0.483
+Ep 1 (Step 001700): Train loss 0.410, Val loss 0.476
+Ep 1 (Step 001800): Train loss 0.413, Val loss 0.477
+Ep 1 (Step 001900): Train loss 0.391, Val loss 0.470
+Ep 1 (Step 002000): Train loss 0.363, Val loss 0.479
+Ep 1 (Step 002100): Train loss 0.368, Val loss 0.468
+Ep 1 (Step 002200): Train loss 0.428, Val loss 0.505
+Ep 1 (Step 002300): Train loss 0.418, Val loss 0.484
+Ep 1 (Step 002400): Train loss 0.386, Val loss 0.471
+Ep 1 (Step 002500): Train loss 0.398, Val loss 0.479
+Ep 1 (Step 002600): Train loss 0.341, Val loss 0.460
+Ep 1 (Step 002700): Train loss 0.316, Val loss 0.484
+Ep 1 (Step 002800): Train loss 0.359, Val loss 0.455
+Ep 1 (Step 002900): Train loss 0.388, Val loss 0.453
+Ep 1 (Step 003000): Train loss 0.361, Val loss 0.466
+Ep 1 (Step 003100): Train loss 0.393, Val loss 0.476
+Ep 1 (Step 003200): Train loss 0.335, Val loss 0.470
+Ep 1 (Step 003300): Train loss 0.341, Val loss 0.464
+Ep 1 (Step 003400): Train loss 0.337, Val loss 0.471
+Ep 1 (Step 003500): Train loss 0.330, Val loss 0.463
+Ep 1 (Step 003600): Train loss 0.419, Val loss 0.486
+Ep 1 (Step 003700): Train loss 0.362, Val loss 0.460
+Training accuracy: 85.62% | Validation accuracy: 76.98%
+Ep 2 (Step 003800): Train loss 0.375, Val loss 0.469
+Ep 2 (Step 003900): Train loss 0.336, Val loss 0.454
+Ep 2 (Step 004000): Train loss 0.421, Val loss 0.446
+Ep 2 (Step 004100): Train loss 0.357, Val loss 0.482
+Ep 2 (Step 004200): Train loss 0.337, Val loss 0.466
+Ep 2 (Step 004300): Train loss 0.345, Val loss 0.446
+Ep 2 (Step 004400): Train loss 0.350, Val loss 0.460
+Ep 2 (Step 004500): Train loss 0.341, Val loss 0.445
+Ep 2 (Step 004600): Train loss 0.338, Val loss 0.445
+Ep 2 (Step 004700): Train loss 0.298, Val loss 0.462
+Ep 2 (Step 004800): Train loss 0.347, Val loss 0.456
+Ep 2 (Step 004900): Train loss 0.350, Val loss 0.476
+Ep 2 (Step 005000): Train loss 0.351, Val loss 0.478
+Ep 2 (Step 005100): Train loss 0.347, Val loss 0.472
+Ep 2 (Step 005200): Train loss 0.342, Val loss 0.453
+Ep 2 (Step 005300): Train loss 0.314, Val loss 0.470
+Ep 2 (Step 005400): Train loss 0.370, Val loss 0.487
+Ep 2 (Step 005500): Train loss 0.403, Val loss 0.479
+Ep 2 (Step 005600): Train loss 0.351, Val loss 0.455
+Ep 2 (Step 005700): Train loss 0.326, Val loss 0.482
+Ep 2 (Step 005800): Train loss 0.358, Val loss 0.461
+Ep 2 (Step 005900): Train loss 0.310, Val loss 0.486
+Ep 2 (Step 006000): Train loss 0.318, Val loss 0.487
+Ep 2 (Step 006100): Train loss 0.292, Val loss 0.473
+Ep 2 (Step 006200): Train loss 0.322, Val loss 0.435
+Ep 2 (Step 006300): Train loss 0.263, Val loss 0.432
+Ep 2 (Step 006400): Train loss 0.344, Val loss 0.453
+Ep 2 (Step 006500): Train loss 0.328, Val loss 0.432
+Ep 2 (Step 006600): Train loss 0.304, Val loss 0.454
+Ep 2 (Step 006700): Train loss 0.380, Val loss 0.442
+Ep 2 (Step 006800): Train loss 0.325, Val loss 0.445
+Ep 2 (Step 006900): Train loss 0.329, Val loss 0.454
+Ep 2 (Step 007000): Train loss 0.306, Val loss 0.436
+Ep 2 (Step 007100): Train loss 0.299, Val loss 0.432
+Ep 2 (Step 007200): Train loss 0.334, Val loss 0.440
+Ep 2 (Step 007300): Train loss 0.378, Val loss 0.456
+Ep 2 (Step 007400): Train loss 0.323, Val loss 0.436
+Training accuracy: 86.56% | Validation accuracy: 77.79%
+Restored best checkpoint (val accuracy 77.79%)
+Training completed in 2.50 minutes.
+Saved model to /content/URL-Phishing-Classifier/model/phishing_classifier.pth
+Saved run info to /content/URL-Phishing-Classifier/model/phishing_classifier.train.json
