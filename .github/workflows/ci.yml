@@ -2,14 +2,14 @@ name: ci
 
 on:
   pull_request:
-  push:
-    branches: [master]
-  # deploy.yml runs this first, so a failing commit never deploys
+  # deploy.yml runs this before deploying, so a failing commit never deploys. No push trigger:
+  # it would run CI a second time on every master push.
   workflow_call:
 
+# Only PR runs are superseded by newer pushes; master runs always finish
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -30,12 +30,17 @@ jobs:
 
       # The image's pinned versions first (CPU torch from the PyTorch index), so the tests run
       # against what ships. torch is then already satisfied, so the package install can't pull CUDA.
+      # The constraint keeps the unpinned training deps (pandas, sklearn, ...) from moving the pins.
       - name: Install dependencies
         run: |
           pip install -r api/requirements.txt
-          pip install -e ".[dev]" httpx --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]" httpx -c api/requirements.txt
 
-      # -rs lists skipped tests, e.g. test_api if fastapi were missing
+      # test_api.py skips itself without fastapi, so fail here instead of deploying an untested API
+      - name: Check API dependencies
+        run: python -c "import fastapi, mangum, httpx"
+
+      # -rs lists skipped tests
       - name: Test
         run: pytest -rs
 
