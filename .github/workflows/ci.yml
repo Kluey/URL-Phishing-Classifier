@@ -44,6 +44,19 @@ jobs:
       - name: Test
         run: pytest -rs
 
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # No npm dependencies. Quoted so Node expands the glob, not the shell.
+      - name: Test
+        run: node --test "extension/tests/*.test.js"
+
   infra:
     runs-on: ubuntu-latest
     steps:
