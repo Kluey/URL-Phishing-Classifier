@@ -3,9 +3,11 @@
 (() => {
   const BATCH = 32;
   const PENDING_WAIT_MS = 300;
-  const RESCAN_DEBOUNCE_MS = 500;
+  const RESCAN_DELAY_MS = 500;
+  const BACKDROP_GRACE_MS = 500;
+  const UNKNOWN_TTL_MS = 30_000;
 
-  const results = new Map(); // hostname -> {verdict, p?}
+  const results = new Map(); // hostname -> {verdict, p?, until?}
   const lookups = new Map(); // hostname -> Promise<{verdict, p?}>
   const bypassed = new Set(); // hosts the user chose "Open anyway" for on this page
   let enabled = false;
@@ -13,6 +15,9 @@
   let rescanTimer = null;
   let hovered = null;
   let ui = null;
+  let overlaySeq = 0; // a newer showOverlay call cancels an older one still waiting for CSS
+  let generation = 0; // bumped when userAllow changes; answers from older lookups are dropped
+  let replaying = null; // the link whose held click is being replayed with a.click()
 
   const alive = () => Boolean(chrome.runtime?.id); // false once the extension is reloaded
 
@@ -39,13 +44,25 @@
     return {};
   }
 
+  // A known result, or undefined. "unknown" expires, so the page asks again later
+  // (the service worker backs off on its own while the API is down).
+  function known(host) {
+    const result = results.get(host);
+    if (result?.until && result.until < Date.now()) {
+      results.delete(host);
+      return undefined;
+    }
+    return result;
+  }
+
   function sendChunk(hosts) {
+    const gen = generation;
     const request = ask(hosts).then((answer) => {
+      if (gen !== generation) return answer; // userAllow changed meanwhile; a fresh scan asks again
       for (const host of hosts) {
         const result = answer[host] ?? { verdict: "unknown" };
         lookups.delete(host);
-        // "unknown" isn't kept, so a later hover, click or scan asks again
-        if (result.verdict !== "unknown") results.set(host, result);
+        results.set(host, result.verdict === "unknown" ? { ...result, until: Date.now() + UNKNOWN_TTL_MS } : result);
         if (result.verdict === "phishing" || result.verdict === "shared") ensureUi();
       }
       return answer;
@@ -56,12 +73,13 @@
   }
 
   function request(hosts) {
-    const fresh = [...new Set(hosts)].filter((h) => !results.has(h) && !lookups.has(h));
+    const fresh = [...new Set(hosts)].filter((h) => !known(h) && !lookups.has(h));
     for (let i = 0; i < fresh.length; i += BATCH) sendChunk(fresh.slice(i, i + BATCH));
   }
 
   function lookup(host) {
-    if (results.has(host)) return Promise.resolve(results.get(host));
+    const result = known(host);
+    if (result) return Promise.resolve(result);
     if (!lookups.has(host)) request([host]);
     return lookups.get(host);
   }
@@ -145,11 +163,13 @@
     }
   }
 
-  async function showOverlay(url, host, result, newTab) {
+  async function showOverlay(a, url, host, result, newTab) {
+    const seq = ++overlaySeq;
     const u = ensureUi();
     closeOverlay();
     hideTip();
     await u.styled;
+    if (seq !== overlaySeq) return; // a second click got here first (fast double-click)
 
     const backdrop = document.createElement("div");
     backdrop.className = "backdrop";
@@ -180,7 +200,7 @@
     open.addEventListener("click", () => {
       bypassed.add(host);
       closeOverlay();
-      navigate(url, newTab);
+      navigate(a, url, newTab);
     });
     const actions = document.createElement("div");
     actions.className = "actions";
@@ -188,8 +208,10 @@
 
     dialog.append(title, text, note, actions);
     backdrop.append(dialog);
+    const openedAt = performance.now();
     backdrop.addEventListener("click", (e) => {
-      if (e.target === backdrop) closeOverlay();
+      // The second click of a double-click lands here; it shouldn't dismiss the warning
+      if (e.target === backdrop && performance.now() - openedAt > BACKDROP_GRACE_MS) closeOverlay();
     });
     u.root.append(backdrop);
     u.overlay = backdrop;
@@ -199,9 +221,21 @@
 
   // ---- Events ----
 
-  function navigate(url, newTab) {
-    if (newTab) window.open(url.href, "_blank", "noopener");
-    else location.assign(url.href);
+  function navigate(a, url, newTab) {
+    if (newTab) {
+      // Synthetic clicks drop modifier keys and middle clicks, so open the tab directly
+      window.open(url.href, "_blank", "noopener");
+    } else if (a.isConnected) {
+      // Replaying the click keeps the page's handlers, download, rel and target
+      replaying = a;
+      try {
+        a.click();
+      } finally {
+        replaying = null;
+      }
+    } else {
+      location.assign(url.href);
+    }
   }
 
   function opensNewTab(e, a) {
@@ -212,6 +246,7 @@
 
   function onClick(e) {
     if (!enabled || !alive()) return;
+    if (replaying && e.type === "click" && replaying.contains(e.target)) return;
     if (e.type === "click" ? e.button !== 0 : e.button !== 1) return;
     const a = e.target instanceof Element ? e.target.closest("a[href]") : null;
     const url = a && linkUrl(a);
@@ -219,12 +254,14 @@
     const host = url.hostname;
     const newTab = opensNewTab(e, a);
 
-    const known = results.get(host);
-    if (known) {
-      if (known.verdict === "phishing") {
+    const result = known(host);
+    if (result) {
+      // Anything but phishing goes through untouched, "unknown" included: when the API is
+      // down, clicks behave as if the extension weren't there
+      if (result.verdict === "phishing") {
         e.preventDefault();
         e.stopImmediatePropagation();
-        showOverlay(url, host, known, newTab);
+        showOverlay(a, url, host, result, newTab);
       }
       return;
     }
@@ -233,8 +270,8 @@
     e.stopImmediatePropagation();
     const timeout = new Promise((resolve) => setTimeout(() => resolve(null), PENDING_WAIT_MS));
     Promise.race([lookup(host), timeout]).then((result) => {
-      if (result?.verdict === "phishing") showOverlay(url, host, result, newTab);
-      else navigate(url, newTab);
+      if (result?.verdict === "phishing") showOverlay(a, url, host, result, newTab);
+      else navigate(a, url, newTab);
     });
   }
 
@@ -256,13 +293,26 @@
     hideTip();
   }
 
+  function badge(host) {
+    try {
+      if (alive()) chrome.runtime.sendMessage({ type: "page", host }).catch(() => {});
+    } catch {
+      // Extension reloaded
+    }
+  }
+
   function start() {
     if (enabled) return;
     enabled = true;
     scan();
+    if (location.protocol === "http:" || location.protocol === "https:") badge(location.hostname);
     observer = new MutationObserver(() => {
-      clearTimeout(rescanTimer);
-      rescanTimer = setTimeout(scan, RESCAN_DEBOUNCE_MS);
+      // Throttle, not debounce: a page that changes constantly still gets rescanned
+      if (rescanTimer) return;
+      rescanTimer = setTimeout(() => {
+        rescanTimer = null;
+        scan();
+      }, RESCAN_DELAY_MS);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
   }
@@ -271,8 +321,11 @@
     enabled = false;
     observer?.disconnect();
     clearTimeout(rescanTimer);
+    rescanTimer = null;
+    hovered = null;
     hideTip();
     closeOverlay();
+    badge(null);
   }
 
   window.addEventListener("click", onClick, true);
@@ -285,9 +338,12 @@
     if (area !== "local" || !alive()) return;
     if (changes.userAllow) {
       // The service worker applies userAllow; forget page verdicts so it is asked again
+      generation += 1;
       results.clear();
+      lookups.clear();
       hideTip();
       scan();
+      if (enabled && /^https?:$/.test(location.protocol)) badge(location.hostname);
     }
     if (changes.enabled) (changes.enabled.newValue === false ? stop : start)();
   });

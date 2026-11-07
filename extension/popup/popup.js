@@ -2,6 +2,10 @@ import { normalizeHost, suffixes } from "../rules.js";
 
 const $ = (id) => document.getElementById(id);
 
+// After this long without an answer, the API is probably starting a cold instance
+const WARMING_AFTER_MS = 1500;
+let renderSeq = 0; // a newer render (after Always allow / Stop allowing) wins
+
 const VERDICTS = {
   phishing: ["danger", "Looks like phishing"],
   legit: ["ok", "Looks fine"],
@@ -28,6 +32,7 @@ async function getUserAllow() {
 }
 
 async function render(host) {
+  const seq = ++renderSeq;
   const allowBtn = $("allow");
   const unallowBtn = $("unallow");
   allowBtn.hidden = unallowBtn.hidden = true;
@@ -41,6 +46,12 @@ async function render(host) {
   $("host").textContent = host;
   $("verdict").className = "verdict muted";
   $("verdict").textContent = "Checking…";
+  $("detail").textContent = "";
+  const warming = setTimeout(() => {
+    if (seq !== renderSeq) return;
+    $("verdict").textContent = "Warming up the checker…";
+    $("detail").textContent = "The first check after a quiet period can take up to ~15 s.";
+  }, WARMING_AFTER_MS);
 
   let result = { verdict: "unknown" };
   try {
@@ -48,7 +59,10 @@ async function render(host) {
     result = answer?.[host] ?? result;
   } catch {
     // Service worker unavailable: show unknown
+  } finally {
+    clearTimeout(warming);
   }
+  if (seq !== renderSeq) return;
   const [tone, text] = VERDICTS[result.verdict] ?? VERDICTS.unknown;
   $("verdict").className = `verdict ${tone}`;
   $("verdict").textContent = text;
