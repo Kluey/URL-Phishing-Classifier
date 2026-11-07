@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { classifyBatch, classifyBatchDetailed, createBreaker } from "../api.js";
 
 const apiUrl = "https://api.example";
-const fast = { apiUrl, retryDelayMs: 0, retryTimeoutMs: 20 }; // no real waiting in tests
+const fast = { apiUrl, retryDelayMs: 0, retryTimeoutMs: 20, perHostMs: 0 }; // no real waiting in tests
 
 function jsonResponse(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
@@ -65,19 +65,43 @@ test("an item error is unknown, the rest still count", async () => {
 });
 
 test("a 5xx, a network error or bad JSON gives unknown", async () => {
-  for (const inner of [
-    async () => jsonResponse({ message: "Service Unavailable" }, 503),
-    async () => {
-      throw new TypeError("network");
-    },
-    async () => ({ ok: true, status: 200, json: async () => JSON.parse("{") }),
-    async () => jsonResponse({}),
+  // Only the retryable ones mark the API as unavailable (and so open the breaker)
+  for (const [inner, unavailable] of [
+    [async () => jsonResponse({ message: "Service Unavailable" }, 503), true],
+    [
+      async () => {
+        throw new TypeError("network");
+      },
+      true,
+    ],
+    [async () => ({ ok: true, status: 200, json: async () => JSON.parse("{") }), false],
+    [async () => jsonResponse({}), false],
   ]) {
     const fetchFn = async (...args) => inner(...args);
     const { results, failed } = await classifyBatchDetailed(["a.com", "b.com"], { ...fast, fetchFn });
     assert.deepEqual(results, [{ verdict: "unknown" }, { verdict: "unknown" }]);
-    assert.equal(failed, true);
+    assert.equal(failed, unavailable);
   }
+});
+
+test("the timeout grows with the number of hosts", async () => {
+  const seen = [];
+  const fetchFn = (_url, { signal }) => {
+    const start = Date.now();
+    return new Promise((_, reject) =>
+      signal.addEventListener("abort", () => {
+        seen.push(Date.now() - start);
+        reject(signal.reason);
+      }),
+    );
+  };
+  const opts = { ...fast, fetchFn, timeoutMs: 20, retryTimeoutMs: 20, perHostMs: 10 };
+  await classifyBatch(["a.com"], opts);
+  await classifyBatch(Array.from({ length: 30 }, (_, i) => `h${i}.com`), opts);
+  // 1 host: 20 + 10 ms per attempt; 30 hosts: 20 + 300 ms per attempt
+  assert.equal(seen.length, 4);
+  assert.ok(seen[0] < 200 && seen[1] < 200, `1 host: ${seen}`);
+  assert.ok(seen[2] >= 300 && seen[3] >= 300, `30 hosts: ${seen}`);
 });
 
 test("a slow response times out as unknown", async () => {
@@ -131,7 +155,7 @@ test("no retry on a 4xx other than 429, or on bad JSON", async () => {
     const { results, failed } = await classifyBatchDetailed(["a.com"], { ...fast, fetchFn });
     assert.equal(calls.length, 1);
     assert.deepEqual(results, [{ verdict: "unknown" }]);
-    assert.equal(failed, true);
+    assert.equal(failed, false); // specific to this request: the API is up, so no breaker
   }
 });
 

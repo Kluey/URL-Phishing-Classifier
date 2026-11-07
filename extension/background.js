@@ -1,13 +1,12 @@
 // Service worker: answers {type: "check", hosts} with a verdict per host.
 // Order: local rules, then the session cache, then the API. Hostnames are never logged.
 
-import { classifyBatchDetailed, createBreaker } from "./api.js";
+import { UNKNOWN, classifyBatchDetailed, createBreaker } from "./api.js";
 import { API_URL } from "./config.js";
 import { apiHost, createRules, normalizeHost } from "./rules.js";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHED_VERDICTS = new Set(["phishing", "legit"]); // never cache "unknown"
-const UNKNOWN = { verdict: "unknown" };
 
 // Opens after a request that failed even on retry; while open, the API isn't called.
 // Lives in the worker's memory, so a restarted worker tries again straight away.
@@ -111,19 +110,28 @@ async function checkHosts(rawHosts) {
   await Promise.all(waits);
 
   const out = {};
-  for (const [raw, host] of byRaw) out[raw] = resolved.get(host) ?? { verdict: "unknown" };
+  for (const [raw, host] of byRaw) out[raw] = resolved.get(host) ?? UNKNOWN;
   return out;
 }
 
 // For manual checks from the service worker's DevTools console
 self.checkHosts = checkHosts;
 
+// The page host each tab last reported. The check can wait behind the queue or a cold-start
+// retry, and a tab that moved on meanwhile must not get the old page's badge.
+const pageHosts = new Map();
+chrome.tabs?.onRemoved?.addListener((tabId) => pageHosts.delete(tabId));
+
 // Toolbar badge for the tab's own host. Per-tab badges reset when the tab navigates.
+// Privacy: unlike link checks, this sends the host of the page being visited (unless it is
+// allowlisted, private, user-allowed or cached), so the API sees those page visits.
 async function setPageBadge(tabId, host) {
+  pageHosts.set(tabId, host);
   let phishing = false;
   if (typeof host === "string" && host) {
     phishing = (await checkHosts([host]))[host]?.verdict === "phishing";
   }
+  if (pageHosts.get(tabId) !== host) return; // a newer page in this tab owns the badge
   try {
     await chrome.action.setBadgeBackgroundColor({ tabId, color: "#c62828" });
     await chrome.action.setBadgeText({ tabId, text: phishing ? "!" : "" });
