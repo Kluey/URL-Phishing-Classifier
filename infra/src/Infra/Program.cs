@@ -19,7 +19,8 @@ namespace Infra
             {
                 Env = env,
                 // Cold instances often miss Lambda's init limits, so keep one warm; -c warmup=false turns it off
-                Warmup = app.Node.TryGetContext("warmup")?.ToString() != "false",
+                // Case-insensitive: a JSON boolean in cdk.json arrives as a .NET bool, whose ToString() is "False"
+                Warmup = !string.Equals(app.Node.TryGetContext("warmup")?.ToString(), "false", System.StringComparison.OrdinalIgnoreCase),
             });
 
             Tags.Of(app).Add("project", "url-phishing-classifier");
