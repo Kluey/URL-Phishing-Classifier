@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishing Link Check demo</title>
+  <style>
+    :root { color-scheme: light dark; --muted: #57606a; }
+    @media (prefers-color-scheme: dark) { :root { --muted: #8d96a0; } }
+    body { max-width: 760px; margin: 24px auto; padding: 0 16px; font: 15px/1.5 system-ui, sans-serif; }
+    h2 { margin-top: 28px; font-size: 17px; }
+    p.hint { color: var(--muted); margin-top: -6px; }
+    ul { padding-left: 20px; }
+    li { margin: 3px 0; overflow-wrap: anywhere; }
+    code { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Phishing Link Check demo</h1>
+  <p>
+    Serve this page with <code>python -m http.server -d extension 8000</code> and open
+    <code>http://localhost:8000/demo.html</code> with the extension loaded unpacked
+    (content scripts don't run on <code>file://</code>). Hover over the links, then click them.
+    The phishing hosts come from <code>eval/real_world_urls.csv</code>. They are made up, but someone
+    could register one, so don't choose "Open anyway" unless you mean to.
+  </p>
+
+  <h2>Popular sites (allowlist, never sent)</h2>
+  <p class="hint">No badge, no warning.</p>
+  <ul>
+    <li><a href="https://github.com/pytorch/pytorch/issues">https://github.com/pytorch/pytorch/issues</a></li>
+    <li><a href="https://mail.google.com/mail/u/0/#inbox">https://mail.google.com/mail/u/0/#inbox</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Phishing" target="_blank">https://en.wikipedia.org/wiki/Phishing</a> (target=_blank)</li>
+  </ul>
+
+  <h2>Shared platforms (neutral note, never sent)</h2>
+  <p class="hint">A grey note on hover: anyone can publish there, so the hostname alone can't tell.</p>
+  <ul>
+    <li><a href="https://foo.web.app/">https://foo.web.app/</a></li>
+    <li><a href="https://sites.google.com/view/x">https://sites.google.com/view/x</a></li>
+    <li><a href="https://bit.ly/x">https://bit.ly/x</a></li>
+  </ul>
+
+  <h2>Private and local (skipped, never sent)</h2>
+  <ul>
+    <li><a href="http://192.168.1.1/">http://192.168.1.1/</a></li>
+    <li><a href="http://127.0.0.1:8080/">http://127.0.0.1:8080/</a></li>
+    <li><a href="http://printer.local/">http://printer.local/</a></li>
+    <li><a href="demo.html#same-site">A same-site link</a> (never checked)</li>
+  </ul>
+
+  <h2>Phishing-style hosts (checked by the model)</h2>
+  <p class="hint">A red badge on hover; clicking shows a warning. Try Ctrl+click and middle click too.</p>
+  <ul>
+    <li><a href="https://paypal-account-verify-secure.com/signin">https://paypal-account-verify-secure.com/signin</a></li>
+    <li><a href="https://secure-appleid-unlock-support.net/login">https://secure-appleid-unlock-support.net/login</a></li>
+    <li><a href="https://microsoft-office365-verify.xyz/auth">https://microsoft-office365-verify.xyz/auth</a></li>
+    <li><a href="https://amaz0n-billing-update.com/account">https://amaz0n-billing-update.com/account</a></li>
+    <li><a href="https://netflix-payment-renew-account.info/update">https://netflix-payment-renew-account.info/update</a></li>
+    <li><a href="https://wellsfargo-online-alert.top/verify">https://wellsfargo-online-alert.top/verify</a></li>
+    <li><a href="https://chase-secure-banking-login.cf/session">https://chase-secure-banking-login.cf/session</a></li>
+    <li><a href="https://dhl-parcel-redelivery-fee.com/track">https://dhl-parcel-redelivery-fee.com/track</a></li>
+    <li><a href="https://irs-tax-refund-claim.online/form">https://irs-tax-refund-claim.online/form</a></li>
+    <li><a href="https://facebook-security-checkpoint.000webhostapp.com/">https://facebook-security-checkpoint.000webhostapp.com/</a></li>
+    <li><a href="https://g00gle-account-recovery.com/signin">https://g00gle-account-recovery.com/signin</a></li>
+    <li><a href="https://paypa1-resolution-center.net/case">https://paypa1-resolution-center.net/case</a></li>
+    <li><a href="https://apple-icloud-locate-device.ga/">https://apple-icloud-locate-device.ga/</a></li>
+    <li><a href="https://usps-package-hold-notice.info/pay">https://usps-package-hold-notice.info/pay</a></li>
+    <li><a href="https://binance-airdrop-claim-now.xyz/connect" target="_blank">https://binance-airdrop-claim-now.xyz/connect</a> (target=_blank)</li>
+  </ul>
+
+  <h2>Phishing-style hosts on shared platforms</h2>
+  <p class="hint">These get the neutral note, not the model's verdict (by design: the platform's domain is shared by everyone).</p>
+  <ul>
+    <li><a href="https://login-microsoftonline-auth.web.app/">https://login-microsoftonline-auth.web.app/</a></li>
+    <li><a href="https://metamask-wallet-restore.pages.dev/">https://metamask-wallet-restore.pages.dev/</a></li>
+    <li><a href="https://coinbase-verify-identity.firebaseapp.com/">https://coinbase-verify-identity.firebaseapp.com/</a></li>
+    <li><a href="https://office365-mailbox-upgrade.weebly.com/">https://office365-mailbox-upgrade.weebly.com/</a></li>
+    <li><a href="https://instagram-copyright-appeal.repl.co/">https://instagram-copyright-appeal.repl.co/</a></li>
+  </ul>
+
+  <h2>Added after load</h2>
+  <p class="hint">This link is inserted 2 s after the page loads, to exercise the MutationObserver.</p>
+  <ul id="late"></ul>
+
+  <script>
+    setTimeout(() => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = "https://paypal-secure-billing-update.com/login";
+      a.textContent = a.href;
+      li.append(a);
+      document.getElementById("late").append(li);
+    }, 2000);
+  </script>
+</body>
+</html>

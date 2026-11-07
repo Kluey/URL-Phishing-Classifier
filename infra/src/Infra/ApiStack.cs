@@ -26,8 +26,11 @@ namespace Infra
     {
         public const int MemoryMb = 3008;
         public const int ReservedConcurrency = 5;
-        public const double RateLimit = 10;
-        public const int BurstLimit = 20;
+        // The stage limits must not exceed what the function can run at once: a request that
+        // passes the stage but finds no free instance is throttled by Lambda, and HTTP API
+        // returns that as 503 instead of 429 (Day 7 burst test: 45 of 50 got 503 at burst 20).
+        public const double RateLimit = 5;
+        public const int BurstLimit = ReservedConcurrency;
 
         public ApiStack(Construct scope, string id, ApiStackProps props) : base(scope, id, props)
         {

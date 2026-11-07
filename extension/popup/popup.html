@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phishing Link Check</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Phishing Link Check</h1>
+    <label class="toggle">
+      <input type="checkbox" id="enabled">
+      <span>Warn me</span>
+    </label>
+  </header>
+
+  <section id="site">
+    <div id="host" class="host">…</div>
+    <div id="verdict" class="verdict">Checking…</div>
+    <div id="detail" class="detail"></div>
+  </section>
+
+  <div class="actions">
+    <button id="allow" hidden>Always allow this site</button>
+    <button id="unallow" hidden>Stop allowing this site</button>
+  </div>
+
+  <footer>Only hostnames are sent for checking. Nothing is logged.</footer>
+</body>
+</html>

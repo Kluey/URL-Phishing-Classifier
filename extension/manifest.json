@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Phishing Link Check",
+  "version": "0.1.0",
+  "description": "Warns before you open a link whose hostname looks like phishing. Sends hostnames only.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqxse/HM6KtfSiNh5ZVMicFXaP0vBccXsNB8ZqdAoJj4LzaucUJtkgmTHf7a87DCDB4FiTh1GUNtlM0b26dZVwwtGvnwce1yziBb9BvZNFMOtP8oArIhrsks+wAOaHfwc3npksbqkZ5QeFqDY2O8FLZNJn17HKrkzLy6WmRAvuSDm4T/OmkdnvTCGqp9K0puXmaqqbAUYvf2yHPzcMXMhxEmIeQjwQO2282tqC55Ef5MHnI55tOWa1vZF3cMWB4E+cj2jmB0IQ9ha5fLoYNhQeo+Mo9iVe5H6XStzcxh96l6PZtvq6Nsc1ESz2NfhzySOX5uCPIRuD6YnjzDz6dvqFwIDAQAB",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Phishing Link Check",
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://vktjpkafxf.execute-api.ap-southeast-2.amazonaws.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "warning.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

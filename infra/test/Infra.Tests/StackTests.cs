@@ -65,7 +65,15 @@ public class ApiStackTests
     {
         Synth().HasResourceProperties("AWS::ApiGatewayV2::Stage", Props(
             ("StageName", "$default"),
-            ("DefaultRouteSettings", Props(("ThrottlingRateLimit", 10), ("ThrottlingBurstLimit", 20)))));
+            ("DefaultRouteSettings", Props(("ThrottlingRateLimit", 5), ("ThrottlingBurstLimit", 5)))));
+    }
+
+    [Fact]
+    // Excess load must get 429 from the stage, not 503 from a throttled Lambda
+    public void Stage_burst_fits_reserved_concurrency()
+    {
+        Assert.True(ApiStack.BurstLimit <= ApiStack.ReservedConcurrency);
+        Assert.True(ApiStack.RateLimit <= ApiStack.ReservedConcurrency);
     }
 
     [Fact]

@@ -25,7 +25,10 @@ jobs:
   deploy:
     needs: ci
     runs-on: ubuntu-latest
-    # The OIDC role trusts sub = repo:Kluey/URL-Phishing-Classifier:environment:production
+    # A hung CloudFormation update would otherwise hold the deploy lock for the 6 h default
+    timeout-minutes: 30
+    # The repo uses immutable OIDC subjects, so the role trusts
+    # sub = repo:Kluey@144310243/URL-Phishing-Classifier@1445385687:environment:production
     environment: production
     permissions:
       id-token: write
@@ -61,7 +64,8 @@ jobs:
       # New instances can miss Lambda's init limit and return 503/500 for a while, so retry ~3 min
       - name: Smoke test
         run: |
-          url=$(jq -r '.PhishingApi.ApiUrl' infra/cdk-outputs.json)
+          # -e fails fast if the output is missing instead of retrying against "null"
+          url=$(jq -er '.PhishingApi.ApiUrl' infra/cdk-outputs.json)
           echo "ApiUrl: $url"
           check() {
             curl -sSf --max-time 35 "$url/v1/health" | jq -e '.status == "ok"' &&
