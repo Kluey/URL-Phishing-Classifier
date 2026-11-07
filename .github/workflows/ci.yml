@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  # deploy.yml runs this first, so a failing commit never deploys
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            api/requirements.txt
+            pyproject.toml
+
+      # The image's pinned versions first (CPU torch from the PyTorch index), so the tests run
+      # against what ships. torch is then already satisfied, so the package install can't pull CUDA.
+      - name: Install dependencies
+        run: |
+          pip install -r api/requirements.txt
+          pip install -e ".[dev]" httpx --extra-index-url https://download.pytorch.org/whl/cpu
+
+      # -rs lists skipped tests, e.g. test_api if fastapi were missing
+      - name: Test
+        run: pytest -rs
+
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # Template tests use an ECR image, so they need neither Docker nor the weights
+      - name: Test stack
+        run: dotnet test infra/src/Infra.sln
+
+      # Covers Program.cs. Synth only stages the Docker context; it doesn't build the image.
+      - name: Synth
+        working-directory: infra
+        run: npx --yes aws-cdk@2.1135.1 synth --quiet

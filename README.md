@@ -1,5 +1,8 @@
 # Phishing URL Classifier
 
+[![ci](https://github.com/Kluey/URL-Phishing-Classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/Kluey/URL-Phishing-Classifier/actions/workflows/ci.yml)
+[![deploy](https://github.com/Kluey/URL-Phishing-Classifier/actions/workflows/deploy.yml/badge.svg)](https://github.com/Kluey/URL-Phishing-Classifier/actions/workflows/deploy.yml)
+
 Classifies a URL as phishing or legitimate from its **hostname**, by fine-tuning GPT-2 small (124M) on the PhiUSIIL dataset plus legitimate subdomain hosts from the Tranco top-sites list. Only the last transformer block, the final norm and a new 2-class head are trained.
 
 ## Setup

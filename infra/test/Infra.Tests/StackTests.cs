@@ -69,7 +69,8 @@ public class ApiStackTests
     }
 
     [Fact]
-    public void Warmup_is_off_by_default()
+    // ApiStackProps.Warmup defaults to false; Program.cs turns it on unless -c warmup=false
+    public void Warmup_rule_only_when_requested()
     {
         Synth().ResourceCountIs("AWS::Events::Rule", 0);
     }

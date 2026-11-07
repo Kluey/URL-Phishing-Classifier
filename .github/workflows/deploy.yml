@@ -1,0 +1,81 @@
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Never cancel a deploy halfway; queue the next one instead
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  WEIGHTS_TAG: model-v2-hostname
+  WEIGHTS_MD5: 78f6ef3961228c30a4fbeca6b9c92ce4
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    # The OIDC role trusts sub = repo:Kluey/URL-Phishing-Classifier:environment:production
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # The role can only assume the CDK bootstrap roles (cdk-hnb659fds-*)
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download weights
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$WEIGHTS_TAG" --pattern phishing_classifier.pth --dir model
+          echo "$WEIGHTS_MD5  model/phishing_classifier.pth" | md5sum --check -
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Deploy
+        working-directory: infra
+        run: npx --yes aws-cdk@2.1135.1 deploy PhishingApi --require-approval never --outputs-file cdk-outputs.json
+
+      # New instances can miss Lambda's init limit and return 503/500 for a while, so retry ~3 min
+      - name: Smoke test
+        run: |
+          url=$(jq -r '.PhishingApi.ApiUrl' infra/cdk-outputs.json)
+          echo "ApiUrl: $url"
+          check() {
+            curl -sSf --max-time 35 "$url/v1/health" | jq -e '.status == "ok"' &&
+            curl -sSf --max-time 35 -H 'content-type: application/json' -d '{"host":"google.com"}' \
+              "$url/v1/classify" | tee /dev/stderr |
+              jq -e '.host == "google.com" and .p_phishing >= 0 and .p_phishing <= 1' &&
+            curl -sSf --max-time 35 -H 'content-type: application/json' \
+              -d '{"hosts":["google.com","paypal-login-verify.xyz"]}' "$url/v1/classify/batch" | tee /dev/stderr |
+              jq -e '(.results | length) == 2 and all(.results[]; .error == null and .p_phishing >= 0 and .p_phishing <= 1)'
+          }
+          for attempt in $(seq 1 12); do
+            if check; then echo "Smoke test passed on attempt $attempt"; exit 0; fi
+            echo "Attempt $attempt failed; retrying in 15 s"
+            sleep 15
+          done
+          echo "Smoke test failed after 12 attempts" >&2
+          exit 1
